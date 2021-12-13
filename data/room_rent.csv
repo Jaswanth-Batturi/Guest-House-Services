@@ -1,0 +1,3 @@
+category varchar(30), rent int
+Attached Bathroom,500
+Non Attached Bathroom,250

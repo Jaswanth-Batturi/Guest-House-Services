@@ -1,0 +1,154 @@
+﻿-- Creating the Database
+CREATE DATABASE GuestHouse;
+USE GuestHouse;
+-- Creating the Tables
+-- IIT Patna Registered User Details
+CREATE TABLE IITP_User(user_id varchar(10) PRIMARY KEY, password varchar(255), name varchar(30), designation varchar(10), department varchar(3), phone varchar(15),  email varchar(30));
+-- Guest House Room Details
+CREATE TABLE Rooms(room_id int PRIMARY KEY, category varchar(30));
+-- Room rent per day in different categories
+CREATE TABLE Room_Rent(category varchar(30), rent int);
+-- Food price for differnt categories
+CREATE TABLE Food_Price(veg_bf int, non_veg_bf int, veg_lh int, non_veg_lh int, veg_dn int, non_veg_dn int);
+-- Room Booking Applications
+CREATE TABLE Application(application_id varchar(4) PRIMARY KEY, user_id varchar(10), no_of_guests int, status varchar(10), category varchar(30), room_id int, arrival_date date, departure_date date, purpose varchar(20), payment_by varchar(20), time timestamp, FOREIGN KEY(user_id) REFERENCES IITP_User(user_id), FOREIGN KEY(room_id) REFERENCES Rooms(room_id));
+-- Guest Details of Applications
+CREATE TABLE Guest_Details(application_id varchar(4), guest_id varchar(4), guest_name varchar(30), guest_desg varchar(30), guest_ph varchar(15), email varchar(30), flat_street_no varchar(30), city varchar(30), state varchar(30), pincode varchar(10), PRIMARY KEY(application_id, guest_id), FOREIGN KEY(application_id) REFERENCES Application(application_id));
+-- Food ordered by Guests
+CREATE TABLE Food_Order(application_id varchar(4) PRIMARY KEY, veg_bf int, non_veg_bf int, veg_lh int, non_veg_lh int, veg_dn int, non_veg_dn int, FOREIGN KEY(application_id) REFERENCES Application(application_id));
+-- Payment Details of Room and Food Bills
+CREATE TABLE Payment(application_id varchar(4) PRIMARY KEY, room_bill int, food_bill int, pay_status varchar(8), payment_date date, FOREIGN KEY (application_id) REFERENCES Application(application_id));
+-- Guest House Expenditures
+CREATE TABLE Expenditure(category varchar(30), dt date, amount int);
+
+-- trigger to allot a vacant room and initiate the payment receipt when an application gets accepted
+DELIMITER $$
+CREATE TRIGGER after_application_accepted
+    BEFORE UPDATE ON Application FOR EACH ROW
+    BEGIN
+    DECLARE food_bill int DEFAULT 0;
+    DECLARE room_bill int;
+    DECLARE room_no int;
+    IF (OLD.status = 'Pending' AND NEW.status = 'Accepted') THEN
+        SELECT (Food_Count.veg_bf * Food_Price.veg_bf + Food_Count.non_veg_bf * Food_Price.non_veg_bf + Food_Count.veg_lh * Food_Price.veg_lh + Food_Count.non_veg_lh * Food_Price.non_veg_lh + Food_Count.veg_dn * Food_Price.veg_dn + Food_Count.non_veg_dn * Food_Price.non_veg_dn) INTO food_bill FROM (SELECT * FROM Food_Order WHERE application_id = NEW.application_id) AS Food_Count, Food_Price;
+        SELECT rent_per_day * days INTO room_bill FROM (SELECT rent AS rent_per_day FROM Room_Rent WHERE category = NEW.category) T1, (SELECT TIMESTAMPDIFF(DAY, NEW.arrival_date, NEW.departure_date) + 1 AS days) T2;
+        INSERT INTO Payment VALUES (NEW.application_id, room_bill, food_bill, 'Not Paid', NULL);
+        SELECT room_id INTO room_no FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, NEW.arrival_date, departure_date) < 0 OR TIMESTAMPDIFF(DAY, NEW.departure_date,  arrival_date) > 0)) AND category = NEW.category LIMIT 1;
+        SET NEW.room_id = room_no;
+    END IF;
+    END $$
+DELIMITER ;
+
+-- Loading Data from CSV files
+SET GLOBAL LOCAL_INFILE = TRUE;
+-- iitp registered users data
+LOAD DATA LOCAL INFILE 'data/iitp_user.csv' INTO TABLE IITP_User FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Guest House Rooms Data
+LOAD DATA LOCAL INFILE 'data/rooms.csv' INTO TABLE Rooms FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Guest House Prices Data
+LOAD DATA LOCAL INFILE 'data/room_rent.csv' INTO TABLE Room_Rent FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Food Prices Data
+LOAD DATA LOCAL INFILE 'data/food_price.csv' INTO TABLE Food_Price FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Room Bookings Applications Data
+LOAD DATA LOCAL INFILE 'data/application.csv' INTO TABLE Application FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Guest Details Data
+LOAD DATA LOCAL INFILE 'data/guest_details.csv' INTO TABLE Guest_Details FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Food ordered by Guests
+LOAD DATA LOCAL INFILE 'data/food_order.csv' INTO TABLE Food_Order FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Room and Food Payment Data
+LOAD DATA LOCAL INFILE 'data/payment.csv' INTO TABLE Payment FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+-- Guest House Expenditures Data
+LOAD DATA LOCAL INFILE 'data/expenditure.csv' INTO TABLE Expenditure FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+
+SELECT * FROM IITP_User;
+SELECT * FROM Rooms;
+SELECT * FROM Room_Rent;
+SELECT * FROM Food_Price;
+SELECT * FROM Application;
+SELECT * FROM Guest_Details;
+SELECT * FROM Food_Order;
+SELECT * FROM Payment;
+SELECT * FROM Expenditure;
+
+-- Procedure for viewing monthly booking categories in a given month of particular year
+DELIMITER $$
+CREATE PROCEDURE Monthly_booking_categories(IN month int, IN year int)
+BEGIN
+    DECLARE dt date;
+    SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    SELECT category, count(*) FROM Application WHERE status = 'Accepted' AND TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0 GROUP BY category;
+END $$
+DELIMITER ;
+
+CALL Monthly_booking_categories(11, 2021);
+-- Procedure for viewing Total Monthly Expenditure of Guest House in a given month of particular year
+DELIMITER $$
+CREATE PROCEDURE Total_Monthly_Expenditure(IN month int, IN year int)
+BEGIN
+    DECLARE day date;
+    SELECT CONCAT(year, '-', month, '-', '01') INTO day;
+SELECT SUM(amount) AS Total_Monthly_Expenditure FROM Expenditure WHERE TIMESTAMPDIFF(DAY, day, dt)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(day), dt) <= 0;
+END $$
+DELIMITER ;
+
+CALL Total_Monthly_Expenditure(11, 2021);
+-- Procedure for generation the Payment bills
+DELIMITER $$
+CREATE PROCEDURE Generate_bills()
+BEGIN
+    SELECT * FROM Payment;
+END $$
+DELIMITER ;
+
+CALL Generate_bills();
+-- Procedure for checking Rooms Availability between two given dates
+DELIMITER $$
+CREATE PROCEDURE Rooms_Availability(IN arrival DATE, IN departure DATE)
+BEGIN
+    SELECT * FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, arrival, departure_date) < 0 OR TIMESTAMPDIFF(DAY, departure,  arrival_date) > 0));
+END $$
+DELIMITER ;
+
+CALL Rooms_Availability('2021-11-27','2021-11-30');
+-- Procedure for checking Rooms availability of Particular Category between two given dates
+DELIMITER $$
+CREATE PROCEDURE Category_Rooms_Availability(IN arrival DATE, IN departure DATE, IN cat varchar(20))
+BEGIN
+    SELECT * FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, arrival, departure_date) < 0 OR TIMESTAMPDIFF(DAY, departure,  arrival_date) > 0)) AND category = cat;
+END $$
+DELIMITER ;
+
+CALL Category_Rooms_Availability('2021-11-27','2021-11-30', 'Attached Bathroom');
+-- Procedure for viewing Total Food Billing in a given month of particular year
+DELIMITER $$
+CREATE PROCEDURE Monthly_food_billing(IN month int, IN year int)
+BEGIN
+    DECLARE dt date;
+    SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    SELECT SUM(food_bill) AS Monthly_Food_Billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+END $$
+DELIMITER ;
+
+CALL Monthly_food_billing(11, 2021);
+-- Procedure for viewing Total Guest House Room Billing in a given month of particular year
+DELIMITER $$
+CREATE PROCEDURE Monthly_room_billing(IN month int, IN year int)
+BEGIN
+    DECLARE dt date;
+    SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    SELECT SUM(room_bill) AS Monthly_room_billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+END $$
+DELIMITER ;
+
+CALL Monthly_room_billing(11, 2021);
+-- Procedure for viewing Total Billing(Room and Food Bill) in a given month of particular year
+DELIMITER $$
+CREATE PROCEDURE Monthly_guest_house_billing(IN month int, IN year int)
+BEGIN
+    DECLARE dt date;
+    SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    SELECT SUM(room_bill + food_bill) AS Monthly_guest_house_billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+END $$
+DELIMITER ;
+
+CALL Monthly_guest_house_billing(11, 2021);

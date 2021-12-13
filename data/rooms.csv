@@ -1,0 +1,13 @@
+room_id int, category varchar(30), PRIMARY KEY (room_id)
+101,Attached Bathroom
+102,Attached Bathroom
+103,Non Attached Bathroom
+104,Non Attached Bathroom
+201,Attached Bathroom
+202,Attached Bathroom
+203,Non Attached Bathroom
+204,Non Attached Bathroom
+301,Attached Bathroom
+302,Attached Bathroom
+303,Non Attached Bathroom
+304,Non Attached Bathroom

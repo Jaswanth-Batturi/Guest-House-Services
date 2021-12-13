@@ -1,0 +1,16 @@
+application_id varchar(4), guest_id varchar(4), guest_name varchar(30), guest_desg varchar(30), guest_ph varchar(15), email varchar(30), flat_street_no varchar(30), city varchar(30), state varchar(30), pincode varchar(10), PRIMARY KEY (application_id, guest_id)
+0001,0001,Baskar,Director of IITB,7826274751,Baskar@gmail.com,368/Gandhi Nagar-2nd lane,Mumbai,Maharashtra,371823
+0002,0002,Sravan Kumar,Businessman,8276252617,Sravan@gmail.com,491/Balaji Nagar,Hyderabad,Telangana,373614
+0002,0003,Lakshmi,Housewife,7363538163,Lakshmi@gmail.com,491/Balaji Nagar,Hyderabad,Telangana,373614
+0003,0004,Bhargav,Professor of IITM,8474626319,Bhargav@gmail.com,1st lane road-3383,Indore,Madhya Pradesh,163663
+0004,0005,Prakash,CEO of Youth foundation,6828928265,Prakash@gmail.com,2442B-2nd Street,Lucknow,Uttar Pradesh,452431
+0004,0006,Priyanka,Manager of Youth foundation,7365352522,Priyanka@gmail.com,2442B-2nd Street,Lucknow,Uttar Pradesh,452431
+0005,0007,Srinivas,Relative,9266543210,Srinivas@yahoo.com,100A3-Sriram Mandir Street,Chennai,Tamilnadu,973731
+0005,0008,Varshitha,Relative,9028311011,Varshitha@gmail.com,100A3-Sriram Mandir Street,Chennai,Tamilnadu,973731
+0006,0009,Vikram Kumar,Deputy Minister,9073621430,Vikram@ind.gov.in,Anand Bhavan/1883G,Bengaluru,Karnataka,377321
+0007,0010,Swathi Naidu,TEDx Speaker,8366567191,Swathi@tedx.ind.com,Z-Plaza Apartments,Mumbai,Maharashtra,099383
+0007,0011,Kiran,TEDx Speaker,9737636372,Kiran@tedx.ind.com,KV Nagar/BYPASS road,Bhopal,Madhya Pradesh,163663
+0008,0012,Nagarjuna,Relative,7846462728,Nagarjuna@gmail.com,Sangeeta Towers - 874AB Nagar,Patna,Bihar,058757
+0009,0013,Sandeep Kumar,Sports Committee Head,7893764610,Sandeep@iitp.ac.in,2nd Street-Baba Nagar,Patna,Bihar,782718
+0010,0014,Karthik reddy,Relative,8736110181,Karthik@yahoo.com,1A74 - Srivalli Bazaar,Hyderabad,Telangana,746632
+0010,0015,Kavya,Relative,7484993221,Kavya@gmail.com,1A74 - Srivalli Bazaar,Hyderabad,Telangana,746632

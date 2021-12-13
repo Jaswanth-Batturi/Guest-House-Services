@@ -1,0 +1,6 @@
+application_id varchar(4), room_bill int, food_bill int, pay_status varchar(8), payment_date date, PRIMARY KEY (application_id)
+0001,2000,250,Paid,2021-11-23
+0003,750,160,Not Paid,\N
+0004,1250,320,Paid,2021-11-23
+0005,1500,350,Not Paid,\N
+0009,1000,0,Not Paid,\N

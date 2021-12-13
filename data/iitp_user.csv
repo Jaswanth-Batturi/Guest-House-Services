@@ -1,0 +1,11 @@
+﻿user_id varchar(10), password varchar(255), name varchar(30), designation varchar(10), department varchar(3), phone varchar(15),  email varchar(30), PRIMARY KEY (user_id)
+1901CS01,pass,Abhay Kumar,Student,CS,9282171814,Abhay@gmail.com
+2727EE82,secret,Abhiram,Faculty,EE,8372464728,Abhiram@yahoo.com
+8474AD12,123,Raghav,Admin,AD,9483802918,Raghav@iitp.ac.in
+1801ME38,password,Mahesh,Student,ME,9282746573,Mahesh@gmail.com
+2001CS10,12345,Krishna,Faculty,CS,8336447383,Krishna@iitp.ac.in
+3882PH74,abc123,Sanjiv Kumar,Faculty,PH,7837364652,Sanjiv@iitp.ac.in
+1901MM20,@Sandeep,Sandeep Kishan,Student,MM,8292846651,SandeepK@gmail.com
+1792CS02,letmein,Vishal,Faculty,CS,7846437783,Vishal@yahoo.com
+3676AD62,123abc,Sanjeev Kumar,Admin,AD,9297262652,Sanjeev@gmail.com
+1901CE01,passcode,Priyanka,Student,CE,8277282618,Priyanka@iitp.ac.in

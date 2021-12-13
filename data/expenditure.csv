@@ -1,0 +1,11 @@
+category varchar(30), dt date, amount int
+Water Bill,2021-10-29,3000
+Current Bill,2021-10-20,5000
+Vegetables Bill,2021-10-30,1300
+Gas Bill,2021-10-04,3500
+Milk Bill,2021-10-17,1200
+Water Bill,2021-11-19,2500
+Current Bill,2021-11-16,2000
+Vegetables Bill,2021-11-23,1500
+Gas Bill,2021-11-17,1000
+Milk Bill,2021-11-03,1200

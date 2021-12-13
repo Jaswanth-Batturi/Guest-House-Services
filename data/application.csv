@@ -1,0 +1,11 @@
+application_id varchar(4),user_id varchar(10),no_of_guests int,status varchar(10),category varchar(30),room_id int,arrival_date date,departure_date date,purpose varchar(20),payment_by varchar(20),time timestamp,PRIMARYKEY (application_id)
+0001,2727EE82,1,Accepted,Attached Bathroom,101,2021-11-27,2021-11-30,Official,Institute,2021-11-23 14:03:34
+0002,1901CS01,2,Pending,Attached Bathroom,\N,2021-11-26,2021-11-29,Personal,Indentor,2021-11-23 14:07:40
+0003,8474AD12,1,Accepted,Non Attached Bathroom,103,2021-12-02,2021-12-04,Official,Project Fund,2021-11-23 14:10:21
+0004,1801ME38,2,Accepted,Non Attached Bathroom,203,2021-11-23,2021-11-27,Official,Guest,2021-11-23 14:14:28
+0005,2727EE82,2,Accepted,Attached Bathroom,301,2021-12-01,2021-12-03,Personal,Indentor,2021-11-23 14:17:52
+0006,3882PH74,1,Rejected,Non Attached Bathroom,\N,2021-11-25,2021-11-28,Official,Institute,2021-11-23 14:20:16
+0007,1901MM20,2,Pending,Attached Bathroom,\N,2021-11-27,2021-12-05,Official,Guest,2021-11-23 14:24:44
+0008,1901CS01,1,Pending,Attached Bathroom,\N,2021-12-02,2021-12-04,Personal,Guest,2021-11-23 14:28:03
+0009,1792CS02,1,Accepted,Non Attached Bathroom,104,2021-11-24,2021-11-27,Official,Guest,2021-11-23 14:31:00
+0010,2727EE82,2,Pending,Attached Bathroom,\N,2021-11-26,2021-11-30,Personal,Indentor,2021-11-23 14:33:52

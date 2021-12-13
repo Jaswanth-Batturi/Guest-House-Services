@@ -1,0 +1,2 @@
+veg_bf int, non_veg_bf int, veg_lh int, non_veg_lh int, veg_dn int, non_veg_dn int
+20,25,30,30,30,40

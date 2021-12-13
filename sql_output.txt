@@ -1,0 +1,439 @@
+mysql> -- Creating the Database
+mysql> CREATE DATABASE GuestHouse;
+Query OK, 1 row affected (0.06 sec)
+
+mysql> USE GuestHouse;
+Database changed
+mysql> -- Creating the Tables
+mysql> -- IIT Patna Registered User Details
+mysql> CREATE TABLE IITP_User(user_id varchar(10) PRIMARY KEY, password varchar(255), name varchar(30), designation varchar(10), department varchar(3), phone varchar(15),  email varchar(30));
+Query OK, 0 rows affected (0.30 sec)
+
+mysql> -- Guest House Room Details
+mysql> CREATE TABLE Rooms(room_id int PRIMARY KEY, category varchar(30));
+Query OK, 0 rows affected (0.19 sec)
+
+mysql> -- Room rent per day in different categories
+mysql> CREATE TABLE Room_Rent(category varchar(30), rent int);
+Query OK, 0 rows affected (0.29 sec)
+
+mysql> -- Food price for differnt categories
+mysql> CREATE TABLE Food_Price(veg_bf int, non_veg_bf int, veg_lh int, non_veg_lh int, veg_dn int, non_veg_dn int);
+Query OK, 0 rows affected (0.63 sec)
+
+mysql> -- Room Booking Applications
+mysql> CREATE TABLE Application(application_id varchar(4) PRIMARY KEY, user_id varchar(10), no_of_guests int, status varchar(10), category varchar(30), room_id int, arrival_date date, departure_date date, purpose varchar(20), payment_by varchar(20), time timestamp, FOREIGN KEY(user_id) REFERENCES IITP_User(user_id), FOREIGN KEY(room_id) REFERENCES Rooms(room_id));
+Query OK, 0 rows affected (0.43 sec)
+
+mysql> -- Guest Details of Applications
+mysql> CREATE TABLE Guest_Details(application_id varchar(4), guest_id varchar(4), guest_name varchar(30), guest_desg varchar(30), guest_ph varchar(15), email varchar(30), flat_street_no varchar(30), city varchar(30), state varchar(30), pincode varchar(10), PRIMARY KEY(application_id, guest_id), FOREIGN KEY(application_id) REFERENCES Application(application_id));
+Query OK, 0 rows affected (0.29 sec)
+
+mysql> -- Food ordered by Guests
+mysql> CREATE TABLE Food_Order(application_id varchar(4) PRIMARY KEY, veg_bf int, non_veg_bf int, veg_lh int, non_veg_lh int, veg_dn int, non_veg_dn int, FOREIGN KEY(application_id) REFERENCES Application(application_id));
+Query OK, 0 rows affected (0.29 sec)
+
+mysql> -- Payment Details of Room and Food Bills
+mysql> CREATE TABLE Payment(application_id varchar(4) PRIMARY KEY, room_bill int, food_bill int, pay_status varchar(8), payment_date date, FOREIGN KEY (application_id) REFERENCES Application(application_id));
+Query OK, 0 rows affected (0.17 sec)
+
+mysql> -- Guest House Expenditures
+mysql> CREATE TABLE Expenditure(category varchar(30), dt date, amount int);
+Query OK, 0 rows affected (0.42 sec)
+
+mysql>
+mysql> -- trigger to allot a vacant room and initiate the payment receipt when an application gets accepted
+mysql> DELIMITER $$
+mysql> CREATE TRIGGER after_application_accepted
+    ->     BEFORE UPDATE ON Application FOR EACH ROW
+    ->     BEGIN
+    ->     DECLARE food_bill int DEFAULT 0;
+    ->     DECLARE room_bill int;
+    ->     DECLARE room_no int;
+    ->     IF (OLD.status = 'Pending' AND NEW.status = 'Accepted') THEN
+    ->         SELECT (Food_Count.veg_bf * Food_Price.veg_bf + Food_Count.non_veg_bf * Food_Price.non_veg_bf + Food_Count.veg_lh * Food_Price.veg_lh + Food_Count.non_veg_lh * Food_Price.non_veg_lh + Food_Count.veg_dn * Food_Price.veg_dn + Food_Count.non_veg_dn * Food_Price.non_veg_dn) INTO food_bill FROM (SELECT * FROM Food_Order WHERE application_id = NEW.application_id) AS Food_Count, Food_Price;
+    ->         SELECT rent_per_day * days INTO room_bill FROM (SELECT rent AS rent_per_day FROM Room_Rent WHERE category = NEW.category) T1, (SELECT TIMESTAMPDIFF(DAY, NEW.arrival_date, NEW.departure_date) + 1 AS days) T2;
+    ->         INSERT INTO Payment VALUES (NEW.application_id, room_bill, food_bill, 'Not Paid', NULL);
+    ->         SELECT room_id INTO room_no FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, NEW.arrival_date, departure_date) < 0 OR TIMESTAMPDIFF(DAY, NEW.departure_date,  arrival_date) > 0)) AND category = NEW.category LIMIT 1;
+    ->         SET NEW.room_id = room_no;
+    ->     END IF;
+    ->     END $$
+Query OK, 0 rows affected (0.11 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> -- Loading Data from CSV files
+mysql> SET GLOBAL LOCAL_INFILE = TRUE;
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> -- iitp registered users data
+mysql> LOAD DATA LOCAL INFILE 'data/iitp_user.csv' INTO TABLE IITP_User FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 10 rows affected (0.08 sec)
+Records: 10  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Guest House Rooms Data
+mysql> LOAD DATA LOCAL INFILE 'data/rooms.csv' INTO TABLE Rooms FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 12 rows affected (0.06 sec)
+Records: 12  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Guest House Prices Data
+mysql> LOAD DATA LOCAL INFILE 'data/room_rent.csv' INTO TABLE Room_Rent FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 2 rows affected (0.02 sec)
+Records: 2  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Food Prices Data
+mysql> LOAD DATA LOCAL INFILE 'data/food_price.csv' INTO TABLE Food_Price FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 1 row affected (0.03 sec)
+Records: 1  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Room Bookings Applications Data
+mysql> LOAD DATA LOCAL INFILE 'data/application.csv' INTO TABLE Application FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 10 rows affected (0.07 sec)
+Records: 10  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Guest Details Data
+mysql> LOAD DATA LOCAL INFILE 'data/guest_details.csv' INTO TABLE Guest_Details FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 15 rows affected (0.07 sec)
+Records: 15  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Food ordered by Guests
+mysql> LOAD DATA LOCAL INFILE 'data/food_order.csv' INTO TABLE Food_Order FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 10 rows affected (0.06 sec)
+Records: 10  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Room and Food Payment Data
+mysql> LOAD DATA LOCAL INFILE 'data/payment.csv' INTO TABLE Payment FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 5 rows affected (0.04 sec)
+Records: 5  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql> -- Guest House Expenditures Data
+mysql> LOAD DATA LOCAL INFILE 'data/expenditure.csv' INTO TABLE Expenditure FIELDS TERMINATED BY ',' LINES TERMINATED BY '\r\n' IGNORE 1 LINES;
+Query OK, 10 rows affected (0.03 sec)
+Records: 10  Deleted: 0  Skipped: 0  Warnings: 0
+
+mysql>
+mysql> SELECT * FROM IITP_User;
++----------+----------+----------------+-------------+------------+------------+---------------------+
+| user_id  | password | name           | designation | department | phone      | email               |
++----------+----------+----------------+-------------+------------+------------+---------------------+
+| 1792CS02 | letmein  | Vishal         | Faculty     | CS         | 7846437783 | Vishal@yahoo.com    |
+| 1801ME38 | password | Mahesh         | Student     | ME         | 9282746573 | Mahesh@gmail.com    |
+| 1901CE01 | passcode | Priyanka       | Student     | CE         | 8277282618 | Priyanka@iitp.ac.in |
+| 1901CS01 | pass     | Abhay Kumar    | Student     | CS         | 9282171814 | Abhay@gmail.com     |
+| 1901MM20 | @Sandeep | Sandeep Kishan | Student     | MM         | 8292846651 | SandeepK@gmail.com  |
+| 2001CS10 | 12345    | Krishna        | Faculty     | CS         | 8336447383 | Krishna@iitp.ac.in  |
+| 2727EE82 | secret   | Abhiram        | Faculty     | EE         | 8372464728 | Abhiram@yahoo.com   |
+| 3676AD62 | 123abc   | Sanjeev Kumar  | Admin       | AD         | 9297262652 | Sanjeev@gmail.com   |
+| 3882PH74 | abc123   | Sanjiv Kumar   | Faculty     | PH         | 7837364652 | Sanjiv@iitp.ac.in   |
+| 8474AD12 | 123      | Raghav         | Admin       | AD         | 9483802918 | Raghav@iitp.ac.in   |
++----------+----------+----------------+-------------+------------+------------+---------------------+
+10 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Rooms;
++---------+-----------------------+
+| room_id | category              |
++---------+-----------------------+
+|     101 | Attached Bathroom     |
+|     102 | Attached Bathroom     |
+|     103 | Non Attached Bathroom |
+|     104 | Non Attached Bathroom |
+|     201 | Attached Bathroom     |
+|     202 | Attached Bathroom     |
+|     203 | Non Attached Bathroom |
+|     204 | Non Attached Bathroom |
+|     301 | Attached Bathroom     |
+|     302 | Attached Bathroom     |
+|     303 | Non Attached Bathroom |
+|     304 | Non Attached Bathroom |
++---------+-----------------------+
+12 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Room_Rent;
++-----------------------+------+
+| category              | rent |
++-----------------------+------+
+| Attached Bathroom     |  500 |
+| Non Attached Bathroom |  250 |
++-----------------------+------+
+2 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Food_Price;
++--------+------------+--------+------------+--------+------------+
+| veg_bf | non_veg_bf | veg_lh | non_veg_lh | veg_dn | non_veg_dn |
++--------+------------+--------+------------+--------+------------+
+|     20 |         25 |     30 |         30 |     30 |         40 |
++--------+------------+--------+------------+--------+------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT * FROM Application;
++----------------+----------+--------------+----------+-----------------------+---------+--------------+----------------+----------+--------------+---------------------+
+| application_id | user_id  | no_of_guests | status   | category              | room_id | arrival_date | departure_date | purpose  | payment_by   | time                |
++----------------+----------+--------------+----------+-----------------------+---------+--------------+----------------+----------+--------------+---------------------+
+| 0001           | 2727EE82 |            1 | Accepted | Attached Bathroom     |     101 | 2021-11-27   | 2021-11-30     | Official | Institute    | 2021-11-23 14:03:34 |
+| 0002           | 1901CS01 |            2 | Pending  | Attached Bathroom     |    NULL | 2021-11-26   | 2021-11-29     | Personal | Indentor     | 2021-11-23 14:07:40 |
+| 0003           | 8474AD12 |            1 | Accepted | Non Attached Bathroom |     103 | 2021-12-02   | 2021-12-04     | Official | Project Fund | 2021-11-23 14:10:21 |
+| 0004           | 1801ME38 |            2 | Accepted | Non Attached Bathroom |     203 | 2021-11-23   | 2021-11-27     | Official | Guest        | 2021-11-23 14:14:28 |
+| 0005           | 2727EE82 |            2 | Accepted | Attached Bathroom     |     301 | 2021-12-01   | 2021-12-03     | Personal | Indentor     | 2021-11-23 14:17:52 |
+| 0006           | 3882PH74 |            1 | Rejected | Non Attached Bathroom |    NULL | 2021-11-25   | 2021-11-28     | Official | Institute    | 2021-11-23 14:20:16 |
+| 0007           | 1901MM20 |            2 | Pending  | Attached Bathroom     |    NULL | 2021-11-27   | 2021-12-05     | Official | Guest        | 2021-11-23 14:24:44 |
+| 0008           | 1901CS01 |            1 | Pending  | Attached Bathroom     |    NULL | 2021-12-02   | 2021-12-04     | Personal | Guest        | 2021-11-23 14:28:03 |
+| 0009           | 1792CS02 |            1 | Accepted | Non Attached Bathroom |     104 | 2021-11-24   | 2021-11-27     | Official | Guest        | 2021-11-23 14:31:00 |
+| 0010           | 2727EE82 |            2 | Pending  | Attached Bathroom     |    NULL | 2021-11-26   | 2021-11-30     | Personal | Indentor     | 2021-11-23 14:33:52 |
++----------------+----------+--------------+----------+-----------------------+---------+--------------+----------------+----------+--------------+---------------------+
+10 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Guest_Details;
++----------------+----------+---------------+-----------------------------+------------+---------------------+-------------------------------+-----------+----------------+---------+
+| application_id | guest_id | guest_name    | guest_desg                  | guest_ph   | email               | flat_street_no                | city      | state          | pincode |
++----------------+----------+---------------+-----------------------------+------------+---------------------+-------------------------------+-----------+----------------+---------+
+| 0001           | 0001     | Baskar        | Director of IITB            | 7826274751 | Baskar@gmail.com    | 368/Gandhi Nagar-2nd lane     | Mumbai    | Maharashtra    | 371823  |
+| 0002           | 0002     | Sravan Kumar  | Businessman                 | 8276252617 | Sravan@gmail.com    | 491/Balaji Nagar              | Hyderabad | Telangana      | 373614  |
+| 0002           | 0003     | Lakshmi       | Housewife                   | 7363538163 | Lakshmi@gmail.com   | 491/Balaji Nagar              | Hyderabad | Telangana      | 373614  |
+| 0003           | 0004     | Bhargav       | Professor of IITM           | 8474626319 | Bhargav@gmail.com   | 1st lane road-3383            | Indore    | Madhya Pradesh | 163663  |
+| 0004           | 0005     | Prakash       | CEO of Youth foundation     | 6828928265 | Prakash@gmail.com   | 2442B-2nd Street              | Lucknow   | Uttar Pradesh  | 452431  |
+| 0004           | 0006     | Priyanka      | Manager of Youth foundation | 7365352522 | Priyanka@gmail.com  | 2442B-2nd Street              | Lucknow   | Uttar Pradesh  | 452431  |
+| 0005           | 0007     | Srinivas      | Relative                    | 9266543210 | Srinivas@yahoo.com  | 100A3-Sriram Mandir Street    | Chennai   | Tamilnadu      | 973731  |
+| 0005           | 0008     | Varshitha     | Relative                    | 9028311011 | Varshitha@gmail.com | 100A3-Sriram Mandir Street    | Chennai   | Tamilnadu      | 973731  |
+| 0006           | 0009     | Vikram Kumar  | Deputy Minister             | 9073621430 | Vikram@ind.gov.in   | Anand Bhavan/1883G            | Bengaluru | Karnataka      | 377321  |
+| 0007           | 0010     | Swathi Naidu  | TEDx Speaker                | 8366567191 | Swathi@tedx.ind.com | Z-Plaza Apartments            | Mumbai    | Maharashtra    | 099383  |
+| 0007           | 0011     | Kiran         | TEDx Speaker                | 9737636372 | Kiran@tedx.ind.com  | KV Nagar/BYPASS road          | Bhopal    | Madhya Pradesh | 163663  |
+| 0008           | 0012     | Nagarjuna     | Relative                    | 7846462728 | Nagarjuna@gmail.com | Sangeeta Towers - 874AB Nagar | Patna     | Bihar          | 058757  |
+| 0009           | 0013     | Sandeep Kumar | Sports Committee Head       | 7893764610 | Sandeep@iitp.ac.in  | 2nd Street-Baba Nagar         | Patna     | Bihar          | 782718  |
+| 0010           | 0014     | Karthik reddy | Relative                    | 8736110181 | Karthik@yahoo.com   | 1A74 - Srivalli Bazaar        | Hyderabad | Telangana      | 746632  |
+| 0010           | 0015     | Kavya         | Relative                    | 7484993221 | Kavya@gmail.com     | 1A74 - Srivalli Bazaar        | Hyderabad | Telangana      | 746632  |
++----------------+----------+---------------+-----------------------------+------------+---------------------+-------------------------------+-----------+----------------+---------+
+15 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Food_Order;
++----------------+--------+------------+--------+------------+--------+------------+
+| application_id | veg_bf | non_veg_bf | veg_lh | non_veg_lh | veg_dn | non_veg_dn |
++----------------+--------+------------+--------+------------+--------+------------+
+| 0001           |      3 |          0 |      2 |          1 |      2 |          1 |
+| 0002           |      3 |          0 |      3 |          0 |      3 |          0 |
+| 0003           |      2 |          0 |      0 |          2 |      2 |          0 |
+| 0004           |      4 |          0 |      3 |          1 |      4 |          0 |
+| 0005           |      2 |          2 |      2 |          2 |      2 |          2 |
+| 0006           |      3 |          0 |      3 |          0 |      3 |          0 |
+| 0007           |      5 |          0 |      3 |          2 |      4 |          1 |
+| 0008           |      4 |          0 |      4 |          0 |      4 |          0 |
+| 0009           |      0 |          0 |      0 |          0 |      0 |          0 |
+| 0010           |      6 |          0 |      3 |          3 |      6 |          0 |
++----------------+--------+------------+--------+------------+--------+------------+
+10 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Payment;
++----------------+-----------+-----------+------------+--------------+
+| application_id | room_bill | food_bill | pay_status | payment_date |
++----------------+-----------+-----------+------------+--------------+
+| 0001           |      2000 |       250 | Paid       | 2021-11-23   |
+| 0003           |       750 |       160 | Not Paid   | NULL         |
+| 0004           |      1250 |       320 | Paid       | 2021-11-23   |
+| 0005           |      1500 |       350 | Not Paid   | NULL         |
+| 0009           |      1000 |         0 | Not Paid   | NULL         |
++----------------+-----------+-----------+------------+--------------+
+5 rows in set (0.00 sec)
+
+mysql> SELECT * FROM Expenditure;
++-----------------+------------+--------+
+| category        | dt         | amount |
++-----------------+------------+--------+
+| Water Bill      | 2021-10-29 |   3000 |
+| Current Bill    | 2021-10-20 |   5000 |
+| Vegetables Bill | 2021-10-30 |   1300 |
+| Gas Bill        | 2021-10-04 |   3500 |
+| Milk Bill       | 2021-10-17 |   1200 |
+| Water Bill      | 2021-11-19 |   2500 |
+| Current Bill    | 2021-11-16 |   2000 |
+| Vegetables Bill | 2021-11-23 |   1500 |
+| Gas Bill        | 2021-11-17 |   1000 |
+| Milk Bill       | 2021-11-03 |   1200 |
++-----------------+------------+--------+
+10 rows in set (0.00 sec)
+
+mysql>
+mysql> -- Procedure for viewing monthly booking categories in a given month of particular year
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Monthly_booking_categories(IN month int, IN year int)
+    -> BEGIN
+    ->     DECLARE dt date;
+    ->     SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    ->     SELECT category, count(*) FROM Application WHERE status = 'Accepted' AND TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0 GROUP BY category;
+    -> END $$
+Query OK, 0 rows affected (0.17 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Monthly_booking_categories(11, 2021);
++-----------------------+----------+
+| category              | count(*) |
++-----------------------+----------+
+| Attached Bathroom     |        1 |
+| Non Attached Bathroom |        2 |
++-----------------------+----------+
+2 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> -- Procedure for viewing Total Monthly Expenditure of Guest House in a given month of particular year
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Total_Monthly_Expenditure(IN month int, IN year int)
+    -> BEGIN
+    ->     DECLARE day date;
+    ->     SELECT CONCAT(year, '-', month, '-', '01') INTO day;
+    -> SELECT SUM(amount) AS Total_Monthly_Expenditure FROM Expenditure WHERE TIMESTAMPDIFF(DAY, day, dt)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(day), dt) <= 0;
+    -> END $$
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Total_Monthly_Expenditure(11, 2021);
++---------------------------+
+| Total_Monthly_Expenditure |
++---------------------------+
+|                      8200 |
++---------------------------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> -- Procedure for generation the Payment bills
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Generate_bills()
+    -> BEGIN
+    ->     SELECT * FROM Payment;
+    -> END $$
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Generate_bills();
++----------------+-----------+-----------+------------+--------------+
+| application_id | room_bill | food_bill | pay_status | payment_date |
++----------------+-----------+-----------+------------+--------------+
+| 0001           |      2000 |       250 | Paid       | 2021-11-23   |
+| 0003           |       750 |       160 | Not Paid   | NULL         |
+| 0004           |      1250 |       320 | Paid       | 2021-11-23   |
+| 0005           |      1500 |       350 | Not Paid   | NULL         |
+| 0009           |      1000 |         0 | Not Paid   | NULL         |
++----------------+-----------+-----------+------------+--------------+
+5 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.08 sec)
+
+mysql> -- Procedure for checking Rooms Availability between two given dates
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Rooms_Availability(IN arrival DATE, IN departure DATE)
+    -> BEGIN
+    ->     SELECT * FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, arrival, departure_date) < 0 OR TIMESTAMPDIFF(DAY, departure,  arrival_date) > 0));
+    -> END $$
+Query OK, 0 rows affected (0.08 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Rooms_Availability('2021-11-27','2021-11-30');
++---------+-----------------------+
+| room_id | category              |
++---------+-----------------------+
+|     102 | Attached Bathroom     |
+|     103 | Non Attached Bathroom |
+|     201 | Attached Bathroom     |
+|     202 | Attached Bathroom     |
+|     204 | Non Attached Bathroom |
+|     301 | Attached Bathroom     |
+|     302 | Attached Bathroom     |
+|     303 | Non Attached Bathroom |
+|     304 | Non Attached Bathroom |
++---------+-----------------------+
+9 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> -- Procedure for checking Rooms availability of Particular Category between two given dates
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Category_Rooms_Availability(IN arrival DATE, IN departure DATE, IN cat varchar(20))
+    -> BEGIN
+    ->     SELECT * FROM Rooms WHERE room_id NOT IN (SELECT DISTINCT room_id FROM Application WHERE status = 'Accepted' AND NOT (TIMESTAMPDIFF(DAY, arrival, departure_date) < 0 OR TIMESTAMPDIFF(DAY, departure,  arrival_date) > 0)) AND category = cat;
+    -> END $$
+Query OK, 0 rows affected (0.12 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Category_Rooms_Availability('2021-11-27','2021-11-30', 'Attached Bathroom');
++---------+-------------------+
+| room_id | category          |
++---------+-------------------+
+|     102 | Attached Bathroom |
+|     201 | Attached Bathroom |
+|     202 | Attached Bathroom |
+|     301 | Attached Bathroom |
+|     302 | Attached Bathroom |
++---------+-------------------+
+5 rows in set (0.00 sec)
+
+Query OK, 0 rows affected (0.07 sec)
+
+mysql> -- Procedure for viewing Total Food Billing in a given month of particular year
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Monthly_food_billing(IN month int, IN year int)
+    -> BEGIN
+    ->     DECLARE dt date;
+    ->     SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    ->     SELECT SUM(food_bill) AS Monthly_Food_Billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+    -> END $$
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Monthly_food_billing(11, 2021);
++----------------------+
+| Monthly_Food_Billing |
++----------------------+
+|                  570 |
++----------------------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> -- Procedure for viewing Total Guest House Room Billing in a given month of particular year
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Monthly_room_billing(IN month int, IN year int)
+    -> BEGIN
+    ->     DECLARE dt date;
+    ->     SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    ->     SELECT SUM(room_bill) AS Monthly_room_billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+    -> END $$
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Monthly_room_billing(11, 2021);
++----------------------+
+| Monthly_room_billing |
++----------------------+
+|                 4250 |
++----------------------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> -- Procedure for viewing Total Billing(Room and Food Bill) in a given month of particular year
+mysql> DELIMITER $$
+mysql> CREATE PROCEDURE Monthly_guest_house_billing(IN month int, IN year int)
+    -> BEGIN
+    ->     DECLARE dt date;
+    ->     SELECT CONCAT(year, '-', month, '-', '01') INTO dt;
+    ->     SELECT SUM(room_bill + food_bill) AS Monthly_guest_house_billing FROM Payment WHERE application_id IN (SELECT application_id FROM Application WHERE TIMESTAMPDIFF(DAY, dt, arrival_date)  >= 0 AND TIMESTAMPDIFF(DAY, LAST_DAY(dt), arrival_date) <= 0);
+    -> END $$
+Query OK, 0 rows affected (0.06 sec)
+
+mysql> DELIMITER ;
+mysql>
+mysql> CALL Monthly_guest_house_billing(11, 2021);
++-----------------------------+
+| Monthly_guest_house_billing |
++-----------------------------+
+|                        4820 |
++-----------------------------+
+1 row in set (0.00 sec)
+
+Query OK, 0 rows affected (0.02 sec)
